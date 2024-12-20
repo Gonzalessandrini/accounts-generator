@@ -7,10 +7,10 @@ export class Wallet extends Document {
   address: string;
 
   @Prop({ required: true })
-  privateKey: string;
+  mnemonic: string;
 
   @Prop({ required: true })
-  network: string; // Ejemplo: 'mainnet', 'testnet'
+  network: string;
 }
 
 export const WalletSchema = SchemaFactory.createForClass(Wallet);

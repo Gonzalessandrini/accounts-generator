@@ -5,6 +5,8 @@ import { Wallet } from './wallets.schema';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ECPairFactory from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
+import * as bip39 from 'bip39';
+import * as bip32 from 'bip32';
 
 @Injectable()
 export class WalletsService {
@@ -14,20 +16,20 @@ export class WalletsService {
 
     const bitcoinNetwork = network === 'testnet' ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
 
-    const ECPair = ECPairFactory.ECPairFactory(ecc);
+    const mnemonic = bip39.generateMnemonic();
 
-    const keyPair = ECPair.makeRandom({ network: bitcoinNetwork });
-
-    const pubkeyBuffer = Buffer.from(keyPair.publicKey);
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed, bitcoinNetwork);
+    const keyPair = root.derivePath("m/44'/0'/0'/0/0");
 
     const { address } = bitcoin.payments.p2pkh({
-      pubkey: pubkeyBuffer,
+      pubkey: keyPair.publicKey,
       network: bitcoinNetwork,
     });
 
     const wallet = new this.walletModel({
       address,
-      privateKey: keyPair.toWIF(),
+      mnemonic,
       network,
     });
 
