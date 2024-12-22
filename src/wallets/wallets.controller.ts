@@ -19,7 +19,7 @@ export class WalletsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.walletsService.findOne(id);
+    return this.walletsService.getMnemonic(id);
   }
 
   @Patch(':id')

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Wallet } from './wallets.schema';
+import { encrypt, decrypt } from '../utils/encryption.util';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ECPairFactory from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
@@ -10,13 +11,14 @@ import * as bip32 from 'bip32';
 
 @Injectable()
 export class WalletsService {
-  constructor(@InjectModel(Wallet.name) private walletModel: Model<Wallet>) {}
+  constructor(@InjectModel(Wallet.name) private walletModel: Model<Wallet>) {} 
 
   async createWallet(network: 'mainnet' | 'testnet') {
 
     const bitcoinNetwork = network === 'testnet' ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
 
     const mnemonic = bip39.generateMnemonic();
+    const encryptedMnemonic = encrypt(mnemonic);
 
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32.fromSeed(seed, bitcoinNetwork);
@@ -29,7 +31,7 @@ export class WalletsService {
 
     const wallet = new this.walletModel({
       address,
-      mnemonic,
+      mnemonic: encryptedMnemonic,
       network,
     });
 
@@ -40,8 +42,13 @@ export class WalletsService {
     return this.walletModel.find().exec();
   }
 
-  async findOne(id: string) {
-    return this.walletModel.findById(id).exec();
+  async getMnemonic(walletId: string): Promise<string> {
+    const wallet = await this.walletModel.findById(walletId).exec();
+    if (!wallet) {
+      throw new Error('Wallet not found');
+    }
+
+    return decrypt(wallet.mnemonic); // Desencriptar el mnemonic para usarlo
   }
 
   async update(id: string, updateWalletDto: Partial<Wallet>) {
